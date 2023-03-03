@@ -19,5 +19,5 @@ export const isUnAuthenticated = (
   next: NextFunction
 ) => {
   if (req.isUnauthenticated()) return next();
-  return res.status(getHttpStatusCode("NOT_FOUND")).send("session active");
+  return res.status(getHttpStatusCode("NOT_FOUND")).send("Not Found");
 };

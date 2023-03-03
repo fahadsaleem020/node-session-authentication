@@ -1,12 +1,12 @@
-import express, { Application } from "express";
-import Session, { SessionOptions } from "express-session";
-import cors from "cors";
-import morgan from "morgan";
-import passport from "passport";
-import { client } from "@/configs/client";
-import { PrismaSessionStore } from "@quixo3/prisma-session-store";
-import { authRoute } from "@/routes/authentication";
 import { initializePassportLocal } from "@/configs/passportlocal";
+import { PrismaSessionStore } from "@quixo3/prisma-session-store";
+import Session, { SessionOptions } from "express-session";
+import { authRoute } from "@/routes/authentication";
+import express, { Application } from "express";
+import { client } from "@/configs/client";
+import passport from "passport";
+import morgan from "morgan";
+import cors from "cors";
 
 const port = process.env.PORT || 5000;
 const app: Application = express();

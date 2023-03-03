@@ -1,9 +1,8 @@
-import { generateJwt, getHttpStatusCode, verifyJwt } from "@/utils/http";
+import { generateJwt, getHttpStatusCode, verifyCode } from "@/utils/http";
 import { User, Verification } from "@prisma/client";
 import { client } from "@/configs/client";
 import { Router } from "express";
 import passport from "passport";
-import { validate } from "uuid";
 import { hash } from "bcrypt";
 import {
   isAuthenticated,
@@ -54,7 +53,7 @@ authRoute.post("/signup", isUnAuthenticated, async (req, res) => {
       },
     });
 
-    // send via email;
+    // send via email (sendgrid);
     if (verification.id) return res.send({ code: verification.id });
   } catch (error) {
     console.log(error);
@@ -67,41 +66,46 @@ authRoute.put(
   isUnAuthenticated,
   async (req, res, next) => {
     try {
-      const verificationId: string = req.body.code;
-      const isCodeValid = validate(verificationId);
-
-      if (!isCodeValid)
-        return res
-          .status(getHttpStatusCode("NOT_FOUND"))
-          .send("session expired");
-
-      const verificationModel = await client.verification.delete({
-        where: {
-          id: verificationId,
-        },
-      });
-
-      if (!verificationModel)
-        return res
-          .status(getHttpStatusCode("NOT_FOUND"))
-          .send("session expired");
-
-      const extracted = verifyJwt<User>(verificationModel.token);
+      const { email, password } = await verifyCode(req.body.code as string);
       const user = await client.user.create({
         data: {
-          email: extracted.email,
-          password: extracted.password,
+          email,
+          password,
         },
       });
-
       req.body = user;
       passport.authenticate("local")(req, res, next);
     } catch (error) {
       console.log(error);
-      res.status(getHttpStatusCode("INTERNAL_SERVER_ERROR")).send(error);
+      res.status(getHttpStatusCode("NOT_ACCEPTABLE")).send(error);
     }
   },
   (req, res) => res.send("verified")
+);
+
+authRoute.get(
+  "/verify/:code",
+  async (req, res, next) => {
+    try {
+      const { email, password } = await verifyCode(req.params.code);
+      const user = await client.user.create({
+        data: {
+          email,
+          password,
+        },
+      });
+      req.body = user;
+      next();
+    } catch (error) {
+      console.log(error);
+      res
+        .status(getHttpStatusCode("NOT_ACCEPTABLE"))
+        .send(
+          `<img src=https://www.askideas.com/media/50/Funny-Jim-Carrey-Smiling-Face-Picture.jpg alt="session expired" title="sesison expired" /> `
+        );
+    }
+  },
+  passport.authenticate("local", { successRedirect: process.env.DOMAIN! })
 );
 
 authRoute.delete("/logout", isAuthenticated, (req, res) => {

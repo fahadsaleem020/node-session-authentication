@@ -1,4 +1,7 @@
+import { client } from "@/configs/client";
 import { sign, verify, SignOptions, JwtPayload } from "jsonwebtoken";
+import { validate } from "uuid";
+import { User } from "@prisma/client";
 
 export const getHttpStatusCode = (
   definition: keyof typeof HttpStatusCodeList
@@ -15,6 +18,22 @@ export const generateJwt = (
 
 export const verifyJwt = <T = {}>(token: string) => {
   return verify(token, process.env.JWT_SECRET!) as T & JwtPayload;
+};
+
+export const verifyCode = async (code: string) => {
+  const isCodeValid = validate(code);
+
+  if (!isCodeValid) throw new Error("invalid code");
+
+  const verificationModel = await client.verification.delete({
+    where: {
+      id: code,
+    },
+  });
+
+  if (!verificationModel) throw new Error("session expired");
+
+  return verifyJwt<User>(verificationModel.token);
 };
 
 export const HttpStatusCodeList = {
